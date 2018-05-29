@@ -16,6 +16,7 @@ import br.com.silver.dao.ClientDao;
 import br.com.silver.dao.FinanceDao;
 import br.com.silver.model.Client;
 import br.com.silver.model.Finance;
+import br.com.silver.repository.ConnectionFactory;
 import br.com.silver.utils.*;
 
 import javax.swing.JTextArea;
@@ -24,6 +25,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.awt.event.ActionEvent;
 import javax.swing.JCheckBox;
@@ -47,6 +49,8 @@ public class UI implements IReaderCSV{
 	private int totalUpdateClient;
 	private int totalUpdateFinance;
 	private int totalFail;
+	
+	private ConnectionFactory repository;
 
 	/**
 	 * Launch the application.
@@ -69,6 +73,14 @@ public class UI implements IReaderCSV{
 	 */
 	public UI() {
 		initialize();
+		
+		try {
+			this.repository = ConnectionFactory.getInstance();
+			String statusConn = this.repository.isConnected() ? "connected" : "disconnected";
+			log("Database status: " + statusConn);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -112,6 +124,7 @@ public class UI implements IReaderCSV{
 		
 		// Checkbox CPF
 		chkCPF = new JCheckBox("CPF");
+		chkCPF.setSelected(true);
  		panelTop.add(chkCPF);
 		
 		// Field Log
@@ -197,28 +210,28 @@ public class UI implements IReaderCSV{
 	 * @return Client
 	 */
 	private Client updateClient(ArrayList<String> data) {
-		ClientDao clientDao = new ClientDao();
+		ClientDao clientDao = new ClientDao(this.repository);
 		Client client = null;
-		int id = Integer.parseInt(data.get(0));
-		String cpf = data.get(1);
+		//int id = Integer.parseInt(data.get(0));
+		String cpf = data.get(0);
 		
 		if(chkCPF.isSelected()) {
 			client = clientDao.getByCpf(cpf);
 		} else {
-			client = clientDao.get(id);
+			//client = clientDao.get(id);
 		}
 		
 		if(client == null) {
 			if(chkCPF.isSelected()) {
 				log("Client not found - CPF " + cpf);
 			} else {
-				log("Client not found - ID " + id);
+				//log("Client not found - ID " + id);
 			}
 			
 			return null;
 		}
 		
-		client.setVc(data.get(8));
+		client.setVc(data.get(2));
 		String error = clientDao.update(client);
 		log(error);
 		
@@ -232,10 +245,10 @@ public class UI implements IReaderCSV{
 	 * @return boolean
 	 */
 	private boolean updateFinance(Client client, ArrayList<String> data) {
-		FinanceDao financeDao = new FinanceDao();
+		FinanceDao financeDao = new FinanceDao(this.repository);
 		Finance finance = new Finance();
 		finance.setClient(client);
-		finance.setStatus(data.get(10));
+		finance.setStatus(data.get(3));
 		
 		String error = financeDao.update(finance);
 		log(error);

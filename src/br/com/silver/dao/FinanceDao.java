@@ -10,6 +10,11 @@ import br.com.silver.repository.ConnectionFactory;
 public class FinanceDao {
 	
 	public static String TABLE = "financeiro";
+	private ConnectionFactory repository;
+	
+	public FinanceDao(ConnectionFactory repository) {
+		this.repository = repository;
+	}
 	
 	/**
 	 * Update finance
@@ -18,8 +23,7 @@ public class FinanceDao {
 	 */
 	public String update(Finance finance) {
 		try {
-			ConnectionFactory cf = ConnectionFactory.getInstance();
-			Connection conn = cf.getConnection();
+			Connection conn = this.repository.getConnection();
 
 	        String sql = "UPDATE " + TABLE + " SET status = ? WHERE cliente = ?";
 	        PreparedStatement stmt;

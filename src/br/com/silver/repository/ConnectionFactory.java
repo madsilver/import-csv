@@ -63,6 +63,14 @@ public class ConnectionFactory {
 	}
 	
 	/**
+	 * Get if instance is connected
+	 * @return
+	 * @throws SQLException
+	 */
+	public boolean isConnected() throws SQLException {
+		return !instance.getConnection().isClosed();
+	}
+	/**
 	 * Get config
 	 * @return
 	 */

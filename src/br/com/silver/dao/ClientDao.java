@@ -11,6 +11,11 @@ import br.com.silver.repository.ConnectionFactory;
 public class ClientDao {
 	
 	public static String TABLE = "clientes";
+	private ConnectionFactory repository;
+	
+	public ClientDao(ConnectionFactory repository) {
+		this.repository = repository;
+	}
 	
 	/**
 	 * Get client by id
@@ -21,8 +26,7 @@ public class ClientDao {
 		Client client = null;
 
 	    try {
-	    	ConnectionFactory cf = ConnectionFactory.getInstance();
-			Connection conn = cf.getConnection();
+			Connection conn = this.repository.getConnection();
 			
 			String sql = "SELECT * FROM " + TABLE + " WHERE id = ?";
 			
@@ -52,8 +56,7 @@ public class ClientDao {
 		Client client = null;
 
 	    try {
-	    	ConnectionFactory cf = ConnectionFactory.getInstance();
-			Connection conn = cf.getConnection();
+			Connection conn = this.repository.getConnection();
 			
 			String sql = "SELECT * FROM " + TABLE + " WHERE cpf LIKE ?";
 			
@@ -82,8 +85,7 @@ public class ClientDao {
 	 */
 	public String update(Client client) {
 		try {
-			ConnectionFactory cf = ConnectionFactory.getInstance();
-			Connection conn = cf.getConnection();
+			Connection conn = this.repository.getConnection();
 
 	        String sql = "UPDATE " + TABLE + " SET vccliente = ? WHERE id = ? ";
 	        
