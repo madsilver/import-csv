@@ -10,12 +10,13 @@ import javax.swing.JScrollPane;
 import java.awt.BorderLayout;
 import javax.swing.JButton;
 import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
+import javax.swing.filechooser.FileNameExtensionFilter;
+
+import org.ini4j.Ini;
 
 import br.com.silver.dao.ClientDao;
 import br.com.silver.dao.FinanceDao;
 import br.com.silver.model.Client;
-import br.com.silver.model.Finance;
 import br.com.silver.repository.ConnectionFactory;
 import br.com.silver.utils.*;
 
@@ -28,7 +29,6 @@ import java.io.File;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.awt.event.ActionEvent;
-import javax.swing.JCheckBox;
 import java.awt.Font;
 import java.awt.SystemColor;
 
@@ -41,16 +41,15 @@ public class UI implements IReaderCSV{
 	private JTextField txtFile;
 	private JTextArea txtLog;
 	private JFileChooser fileChooser;
-	private JCheckBox chkCPF;
-	
-	private File file;
-	
-	private int totalRegister;
-	private int totalUpdateClient;
-	private int totalUpdateFinance;
-	private int totalFail;
-	
+	private File file;	
 	private ConnectionFactory repository;
+	private CounterResult counter;
+	private Ini ini;
+	private ClientDao clientDao;
+	private FinanceDao financeDao;
+	
+	public static String NOT_PAID = " ($)";
+	public static String MISSING_DATA = " (!)";
 
 	/**
 	 * Launch the application.
@@ -75,12 +74,19 @@ public class UI implements IReaderCSV{
 		initialize();
 		
 		try {
-			this.repository = ConnectionFactory.getInstance();
+			Config conf = new Config();
+			this.ini = conf.getConfig();
+			this.repository = ConnectionFactory.getInstance(this.ini);
 			String statusConn = this.repository.isConnected() ? "connected" : "disconnected";
 			log("Database status: " + statusConn);
+			
+			this.clientDao = new ClientDao(this.repository);
+			this.financeDao = new FinanceDao(this.repository);
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+		
+		this.counter = new CounterResult();
 	}
 
 	/**
@@ -117,15 +123,10 @@ public class UI implements IReaderCSV{
 		btnImport = new JButton("Import");
 		btnImport.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				startUpdate();
+				startImport();
 			}
 		});
 		panelTop.add(btnImport);
-		
-		// Checkbox CPF
-		chkCPF = new JCheckBox("CPF");
-		chkCPF.setSelected(true);
- 		panelTop.add(chkCPF);
 		
 		// Field Log
 		txtLog = new JTextArea();
@@ -138,6 +139,8 @@ public class UI implements IReaderCSV{
 		
 		// File Chooser
 		fileChooser = new JFileChooser(".");
+		FileNameExtensionFilter filter = new FileNameExtensionFilter("CSV files", "csv", "csv");
+		fileChooser.setFileFilter(filter);
 	    fileChooser.setControlButtonsAreShown(false);
 	}
 	
@@ -152,21 +155,15 @@ public class UI implements IReaderCSV{
 	}
 	
 	/**
-	 * Start update
+	 * Start import
 	 */
-	private void startUpdate() {
+	private void startImport() {
 		if(this.file != null) {
 			txtLog.setText(null);
-			resetCount();
-			log("Opening file ...\n");
 			ReaderCSV rc = new ReaderCSV(this);
 	    	rc.readCSV(this.file);
 	    	
-	    	log("\nDone!\n");
-	    	log("Total registers: " + totalRegister);
-		    log("Total client updates: " + totalUpdateClient);
-		    log("Total finance updates: " + totalUpdateFinance);
-		    log("Total fails: " + totalFail);
+	    	log(this.counter.toString());
 		}
 	}
 	
@@ -174,100 +171,54 @@ public class UI implements IReaderCSV{
 	 * Print log in terminal
 	 * @param log
 	 */
-	private void log(String log) {
-		SwingUtilities.invokeLater(
-          new Runnable() {
-             public void run()
-             {
-            	 if(log != null) {
-         			txtLog.append(String.format("%s \n", log));
-         		}
-             }
-          });
+	private void log(final String log) {
+		EventQueue.invokeLater(new Runnable() {
+   		 	public void run() {
+   		 		if(log != null)
+     			    txtLog.append(String.format("%s\n", log));
+   		 	}
+		});
 	}
 	
 	@Override
-	public void afterRead(ArrayList<String> data) {
-		Client client = updateClient(data);
-		totalRegister++;
-		
-		if(client != null) {
-			totalUpdateClient++;
-			if(updateFinance(client, data)) {
-				totalUpdateFinance++;
-			} else {
-				totalFail++;
-			}
-		} else {
-			totalFail++;
-		}
-		
-	}
-	
-	/**
-	 * Update client
-	 * @param data
-	 * @return Client
-	 */
-	private Client updateClient(ArrayList<String> data) {
-		ClientDao clientDao = new ClientDao(this.repository);
-		Client client = null;
-		//int id = Integer.parseInt(data.get(0));
-		String cpf = data.get(0);
-		
-		if(chkCPF.isSelected()) {
-			client = clientDao.getByCpf(cpf);
-		} else {
-			//client = clientDao.get(id);
-		}
+	public void lineReady(ArrayList<String> data) {
+		// Count total
+		this.counter.setTotal();
+
+		String cpf = data.get(Integer.parseInt(this.ini.get("csv","cpf")));
+		Client client = this.clientDao.getByCpf(cpf);
+
 		
 		if(client == null) {
-			if(chkCPF.isSelected()) {
-				log("Client not found - CPF " + cpf);
-			} else {
-				//log("Client not found - ID " + id);
-			}
-			
-			return null;
+			log("Client not found - CPF " + cpf);
+			this.counter.setNotFound();
+			return;
 		}
 		
-		client.setVc(data.get(2));
+		boolean paid = this.financeDao.isPaid(client);
+		
+		if(paid) {
+			this.counter.setNotUpdated();
+		} else {
+			client.setName(client.getName() + NOT_PAID);
+		}
+		
+		String vc = data.get(Integer.parseInt(this.ini.get("csv","vc")));
+		String missing = data.get(Integer.parseInt(this.ini.get("csv","missing")));
+		
+		if(missing.contains("I")) {
+			client.setName(client.getName() + MISSING_DATA);
+		}
+		
+		client.setVc(vc);
+
 		String error = clientDao.update(client);
 		log(error);
 		
-		return client;
-	}
-	
-	/**
-	 * Update finance
-	 * @param client
-	 * @param data
-	 * @return boolean
-	 */
-	private boolean updateFinance(Client client, ArrayList<String> data) {
-		FinanceDao financeDao = new FinanceDao(this.repository);
-		Finance finance = new Finance();
-		finance.setClient(client);
-		finance.setStatus(data.get(3));
-		
-		String error = financeDao.update(finance);
-		log(error);
-		
-		if(error == null) {	
-			return false;
+		if(error == null) {
+			this.counter.setClient();
 		}
 		
-		return true;
-	}
-	
-	/**
-	 * Reset count
-	 */
-	private void resetCount() {
-		totalRegister = 0;
-		totalUpdateClient = 0;
-		totalUpdateFinance = 0;
-		totalFail = 0;
 	}
 	
 }

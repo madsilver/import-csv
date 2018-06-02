@@ -67,6 +67,7 @@ public class ClientDao {
 			while (rs.next()) {
 				client = new Client();
 			    client.setId(rs.getInt("id"));
+			    client.setName(rs.getString("nome"));
 				client.setVc(rs.getString("vccliente"));
 				client.setCpf(rs.getString("cpf"));
 			}
@@ -87,12 +88,15 @@ public class ClientDao {
 		try {
 			Connection conn = this.repository.getConnection();
 
-	        String sql = "UPDATE " + TABLE + " SET vccliente = ? WHERE id = ? ";
+	        String sql = "UPDATE " + TABLE + " SET ";
+	        sql += " vccliente = ? ,";
+	        sql += " nome = ? ";
+	        sql += " WHERE id = ? ";
 	        
 			PreparedStatement stmt = conn.prepareStatement(sql);
 			stmt.setString(1, client.getVc());
-	        stmt.setLong(2, client.getId());
-
+			stmt.setString(2, client.getName());
+	        stmt.setLong(3, client.getId());
 	        stmt.execute();
 	        stmt.close();
 	        

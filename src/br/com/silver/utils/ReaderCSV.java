@@ -39,7 +39,7 @@ public class ReaderCSV {
 			
 			while((line = buffer.readLine()) != null) {
 				data = parseCSV(line);
-				this.rc.afterRead(data);
+				this.rc.lineReady(data);
 			}
 		} catch (IOException e) {
 			e.printStackTrace();

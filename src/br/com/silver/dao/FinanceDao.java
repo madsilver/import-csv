@@ -2,9 +2,10 @@ package br.com.silver.dao;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import br.com.silver.model.Finance;
+import br.com.silver.model.Client;
 import br.com.silver.repository.ConnectionFactory;
 
 public class FinanceDao {
@@ -21,23 +22,29 @@ public class FinanceDao {
 	 * @param finance
 	 * @return
 	 */
-	public String update(Finance finance) {
+	public boolean isPaid(Client client) {
 		try {
 			Connection conn = this.repository.getConnection();
 
-	        String sql = "UPDATE " + TABLE + " SET status = ? WHERE cliente = ?";
-	        PreparedStatement stmt;
+	        String sql = "SELECT situacao FROM" + TABLE;
+	        sql += " WHERE cliente = ? AND situacao = 'P'";
+	        PreparedStatement stmt = conn.prepareStatement(sql);
+	        stmt.setInt(1, client.getId()); 
 	        
-			stmt = conn.prepareStatement(sql);
-			stmt.setString(1, finance.getStatus());
-	        stmt.setInt(2, finance.getClient().getId());
-
-	        stmt.execute();
-	        stmt.close();
+	        ResultSet rs = stmt.executeQuery();
+	        String situacao = null;
+			while (rs.next()) {
+				System.out.println(rs);
+				situacao = rs.getString("situacao");
+				
+				if(situacao == "P") {
+					return true;
+				}
+			}
 	        
-	        return null;
+	        return false;
 		} catch (SQLException e) {
-			return e.getMessage();
+			return false;
 		}
 	}
 

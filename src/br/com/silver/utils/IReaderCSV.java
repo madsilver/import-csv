@@ -7,5 +7,5 @@ public interface IReaderCSV {
 	 * Function called after read file
 	 * @param data
 	 */
-	public void afterRead(ArrayList<String> data);
+	public void lineReady(ArrayList<String> data);
 }

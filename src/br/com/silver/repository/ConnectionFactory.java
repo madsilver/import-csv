@@ -1,14 +1,11 @@
 package br.com.silver.repository;
 
-import java.io.File;
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 
 import org.ini4j.Ini;
-import org.ini4j.InvalidFileFormatException;
 
 public class ConnectionFactory {
 	
@@ -19,10 +16,8 @@ public class ConnectionFactory {
 	 * Get connection
 	 * @return Connection
 	 */
-	public ConnectionFactory() {
-        try {
-        	Ini ini = getConfig();
-        	
+	public ConnectionFactory(Ini ini) {
+        try {       	
         	String url = String.format("jdbc:mysql://%s:%s/%s", 
         			ini.get("server", "url"),
         			ini.get("server", "port"),
@@ -44,11 +39,11 @@ public class ConnectionFactory {
 		return this.connection;
 	}
 	
-	public static ConnectionFactory getInstance() throws SQLException {
+	public static ConnectionFactory getInstance(Ini ini) throws SQLException {
 		if (instance == null) {
-            instance = new ConnectionFactory();
+            instance = new ConnectionFactory(ini);
         } else if (instance.getConnection().isClosed()) {
-            instance = new ConnectionFactory();
+            instance = new ConnectionFactory(ini);
         }
 
 		return instance;
@@ -69,25 +64,6 @@ public class ConnectionFactory {
 	 */
 	public boolean isConnected() throws SQLException {
 		return !instance.getConnection().isClosed();
-	}
-	/**
-	 * Get config
-	 * @return
-	 */
-	private Ini getConfig() {
-		try {
-			String path = System.getProperty("user.dir") + "/config/config.ini";
-			Ini ini = new Ini();
-			ini.load(new File(path));
-			
-			return ini;
-
-		} catch (InvalidFileFormatException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return null;
 	}
 	
 	
