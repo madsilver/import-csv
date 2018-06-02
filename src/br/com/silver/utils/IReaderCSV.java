@@ -8,4 +8,5 @@ public interface IReaderCSV {
 	 * @param data
 	 */
 	public void lineReady(ArrayList<String> data);
+
 }

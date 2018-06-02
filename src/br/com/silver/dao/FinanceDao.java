@@ -26,24 +26,26 @@ public class FinanceDao {
 		try {
 			Connection conn = this.repository.getConnection();
 
-	        String sql = "SELECT situacao FROM" + TABLE;
+	        String sql = "SELECT situacao FROM " + TABLE;
 	        sql += " WHERE cliente = ? AND situacao = 'P'";
+	        sql += " ORDER BY vencimento DESC LIMIT 1";
+	        
 	        PreparedStatement stmt = conn.prepareStatement(sql);
 	        stmt.setInt(1, client.getId()); 
 	        
 	        ResultSet rs = stmt.executeQuery();
 	        String situacao = null;
 			while (rs.next()) {
-				System.out.println(rs);
 				situacao = rs.getString("situacao");
 				
-				if(situacao == "P") {
+				if(situacao.contains("P")) {
 					return true;
 				}
 			}
 	        
 	        return false;
 		} catch (SQLException e) {
+			System.out.println(e.getMessage());
 			return false;
 		}
 	}

@@ -9,25 +9,14 @@ import java.util.ArrayList;
 
 public class ReaderCSV {
 	
-	private IReaderCSV rc;
-
-	/**
-	 * Constructor
-	 * @param rc
-	 */
-	public ReaderCSV(IReaderCSV rc) {
-		this.rc = rc;
-	}
-	
 	/**
 	 * Read csv file
 	 * @param file
 	 */
-	public void readCSV(File file) {
+	public static void reader(File file, IReaderCSV rc) {
 		String line;
 		BufferedReader buffer = null;
-		ArrayList<String> data;
-
+		
 		try {
 			buffer = new BufferedReader(new FileReader(file));
 		} catch (FileNotFoundException e1) {
@@ -38,8 +27,12 @@ public class ReaderCSV {
 			buffer.readLine();
 			
 			while((line = buffer.readLine()) != null) {
-				data = parseCSV(line);
-				this.rc.lineReady(data);
+				ArrayList<String> data = parseCSV(line);
+				new Thread() {
+					public void run() {
+						rc.lineReady(data);
+					}
+				}.start();
 			}
 		} catch (IOException e) {
 			e.printStackTrace();

@@ -1,6 +1,5 @@
 package br.com.silver;
 
-import java.awt.EventQueue;
 import java.awt.Insets;
 
 import javax.swing.JFrame;
@@ -10,6 +9,7 @@ import javax.swing.JScrollPane;
 import java.awt.BorderLayout;
 import javax.swing.JButton;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.ini4j.Ini;
@@ -30,7 +30,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.awt.event.ActionEvent;
 import java.awt.Font;
-import java.awt.SystemColor;
+import java.awt.GridLayout;
 
 public class UI implements IReaderCSV{
 
@@ -39,7 +39,6 @@ public class UI implements IReaderCSV{
 	private JButton btnFile;
 	private JButton btnImport;
 	private JTextField txtFile;
-	private JTextArea txtLog;
 	private JFileChooser fileChooser;
 	private File file;	
 	private ConnectionFactory repository;
@@ -47,7 +46,8 @@ public class UI implements IReaderCSV{
 	private Ini ini;
 	private ClientDao clientDao;
 	private FinanceDao financeDao;
-	
+	private JTextArea txtLog;
+	private JTextArea txtResult;
 	public static String NOT_PAID = " ($)";
 	public static String MISSING_DATA = " (!)";
 
@@ -55,7 +55,7 @@ public class UI implements IReaderCSV{
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
-		EventQueue.invokeLater(new Runnable() {
+		SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
 				try {
 					UI window = new UI();
@@ -96,7 +96,7 @@ public class UI implements IReaderCSV{
 		// Frame
 		frame = new JFrame();
 		frame.setTitle("Import Data Sheet");
-		frame.setBounds(100, 100, 700, 500);
+		frame.setBounds(100, 100, 650, 300);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
 		// Panel Top
@@ -115,9 +115,9 @@ public class UI implements IReaderCSV{
 		// Field File
 		txtFile = new JTextField();
 		txtFile.setEditable(false);
-		panelTop.add(txtFile);
 		txtFile.setColumns(40);
 		txtFile.setPreferredSize( new Dimension(0, 26) );
+		panelTop.add(txtFile);
 		
 		// Button Import
 		btnImport = new JButton("Import");
@@ -127,21 +127,42 @@ public class UI implements IReaderCSV{
 			}
 		});
 		panelTop.add(btnImport);
-		
-		// Field Log
-		txtLog = new JTextArea();
-		txtLog.setFont(new Font("Dialog", Font.PLAIN, 11));
-		txtLog.setForeground(new Color(50, 205, 50));
-		txtLog.setBackground(SystemColor.activeCaptionText);
-		txtLog.setMargin( new Insets(10, 10, 10, 10) );
-		JScrollPane scrollPane = new JScrollPane(txtLog);
-		frame.getContentPane().add(scrollPane, BorderLayout.CENTER);
+
+		frame.getContentPane().add(panelLog(), BorderLayout.CENTER);
 		
 		// File Chooser
 		fileChooser = new JFileChooser(".");
 		FileNameExtensionFilter filter = new FileNameExtensionFilter("CSV files", "csv", "csv");
 		fileChooser.setFileFilter(filter);
 	    fileChooser.setControlButtonsAreShown(false);
+	}
+	
+	/**
+	 * Panel Log
+	 * @return JPanel
+	 */
+	private JPanel panelLog() {
+		JPanel panel = new JPanel();
+		panel.setLayout(new GridLayout(2, 1));
+		
+		txtLog = new JTextArea();
+		txtLog.setFont(new Font("Dialog", Font.PLAIN, 12));
+		txtLog.setForeground(new Color(50, 205, 50));
+		txtLog.setBackground(new Color(30, 30, 30));
+		txtLog.setMargin( new Insets(10, 10, 10, 10) );
+		JScrollPane scroll1 = new JScrollPane(txtLog);
+		
+		txtResult = new JTextArea();
+		txtResult.setFont(new Font("Dialog", Font.PLAIN, 12));
+		txtResult.setForeground(new Color(50, 205, 50));
+		txtResult.setBackground(new Color(30, 30, 30));
+		txtResult.setMargin( new Insets(10, 10, 10, 10) );
+		JScrollPane scroll2 = new JScrollPane(txtResult);
+		
+		
+		panel.add(scroll1);
+		panel.add(scroll2);
+		return panel;
 	}
 	
 	/**
@@ -160,10 +181,7 @@ public class UI implements IReaderCSV{
 	private void startImport() {
 		if(this.file != null) {
 			txtLog.setText(null);
-			ReaderCSV rc = new ReaderCSV(this);
-	    	rc.readCSV(this.file);
-	    	
-	    	log(this.counter.toString());
+			ReaderCSV.reader(file, this);
 		}
 	}
 	
@@ -171,54 +189,78 @@ public class UI implements IReaderCSV{
 	 * Print log in terminal
 	 * @param log
 	 */
-	private void log(final String log) {
-		EventQueue.invokeLater(new Runnable() {
+	public void log(String log) {
+		SwingUtilities.invokeLater(new Runnable() {
    		 	public void run() {
-   		 		if(log != null)
-     			    txtLog.append(String.format("%s\n", log));
+   		 		if(log != null) {
+   		 			txtLog.append(String.format("%s\n", log));
+   		 		}
+   		 	}
+		});
+	}
+	
+	/**
+	 * Print result in terminal
+	 * @param result
+	 */
+	public void logResult(String result) {
+		SwingUtilities.invokeLater(new Runnable() {
+   		 	public void run() {
+   		 		if(result != null) {
+   		 			txtResult.setText(String.format("%s\n", result));
+   		 		}
    		 	}
 		});
 	}
 	
 	@Override
 	public void lineReady(ArrayList<String> data) {
-		// Count total
+
 		this.counter.setTotal();
 
-		String cpf = data.get(Integer.parseInt(this.ini.get("csv","cpf")));
+		String cpf = data.get(Integer.parseInt(this.ini.get("csv","cpf")));		
 		Client client = this.clientDao.getByCpf(cpf);
 
-		
 		if(client == null) {
 			log("Client not found - CPF " + cpf);
 			this.counter.setNotFound();
-			return;
+		} else {
+			updateClient(client, data);
 		}
 		
-		boolean paid = this.financeDao.isPaid(client);
+		logResult(this.counter.toString());
+	}
+	
+	/**
+	 * Update client
+	 * @param client
+	 * @param data
+	 */
+	public void updateClient(Client client, ArrayList<String> data) {
+		String situacao = data.get(Integer.parseInt(this.ini.get("csv","situacao")));
+		String missing = data.get(Integer.parseInt(this.ini.get("csv","missing")));
+		String vc = data.get(Integer.parseInt(this.ini.get("csv","vc")));
+		client.setVc(vc);
 		
-		if(paid) {
+		if(this.financeDao.isPaid(client)) {
 			this.counter.setNotUpdated();
 		} else {
-			client.setName(client.getName() + NOT_PAID);
+			if(situacao.contains("N")) {
+				client.setName(client.getName() + NOT_PAID);
+			}
 		}
-		
-		String vc = data.get(Integer.parseInt(this.ini.get("csv","vc")));
-		String missing = data.get(Integer.parseInt(this.ini.get("csv","missing")));
 		
 		if(missing.contains("I")) {
 			client.setName(client.getName() + MISSING_DATA);
 		}
-		
-		client.setVc(vc);
 
 		String error = clientDao.update(client);
-		log(error);
 		
 		if(error == null) {
 			this.counter.setClient();
-		}
-		
+		} 
+
+		log(error);
 	}
 	
 }

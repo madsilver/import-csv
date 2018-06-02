@@ -28,9 +28,9 @@ public class CounterResult {
 	}
 	
 	public String toString() {
-		String result = "\nTotal\tSuccess\tNot Found\tNot Updated\n";
-		result += new String(new char[90]).replace("\0", "-");
-		result += String.format("\n%s\t%s\t%s\t%s", 
+		String result = "\nTotal\t\tSuccess\t\tNot Found\t\tPaid\n";
+		result += new String(new char[155]).replace("\0", "-");
+		result += String.format("\n%s\t\t%s\t\t%s\t\t%s", 
 				this.total,
 				this.client,
 				this.notFound,
